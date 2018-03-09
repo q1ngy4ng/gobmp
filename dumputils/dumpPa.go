@@ -24,16 +24,16 @@ func dumpAsPath(len uint16, data []uint8) {
 		switch segType {
 		case 1: // as set
 			ob = "("
-			cb = ")"
+			cb = ") "
 		case 2: // as sequence
 			ob = ""
-			cb = ""
+			cb = " "
 		case 3: // confed set
 			ob = "["
-			cb = "]"
+			cb = "] "
 		case 4: // confed seq
 			ob = "{"
-			cb = "}"		
+			cb = "} "		
 		}
 		fmt.Println(ob)
 		for j := segLen; j > 0; j-- {
