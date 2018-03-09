@@ -130,7 +130,7 @@ func (bmpConn *BmpConnection) readBmpMsgs(numMsgs int, timeout int) (int, error)
 			break
 		}
 		//fmt.Println("Read", n, "bytes")
-		fmt.Println("add message index", bmpConn.msgIdGen)
+		//fmt.Println("add message index", bmpConn.msgIdGen)
 		bmpMsg := new(BmpMsg)
 		bmpMsg.msgId = bmpConn.msgIdGen
 		bmpMsg.msgType = msgType
