@@ -2,9 +2,11 @@ package bmpconnect
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"time"
 )
 
 type BmpMsg struct {
@@ -63,21 +65,45 @@ const (
 	Terminate  = 3
 )
 
-func (bmpConn *BmpConnection) readBmpMsgs(numMsgs int) (int, error) {
+// Status returned through channel to communicate result to requester
+const (
+	Ok      = 0
+	Error   = 1
+	Timeout = 2
+)
+
+//
+// Read numMsgs on connection. The timeout argument is in seconds, or -1 to wait forever
+//
+func (bmpConn *BmpConnection) readBmpMsgs(numMsgs int, timeout int) (int, error) {
 	msgCount := 0
 	tmp := make([]byte, 6)
 	var err error
 	err = nil
 	for msgCount < numMsgs {
+		if timeout > 0 {
+			curTime := time.Now()
+			deadline := curTime.Add(time.Duration(timeout) * time.Second)
+			bmpConn.conn.SetReadDeadline(deadline)
+		}
 		_, err := io.ReadFull(bmpConn.conn, tmp)
+		bmpConn.conn.SetReadDeadline(time.Time{})
 		if err != nil {
 			if err != io.EOF {
 				fmt.Println("read error:", err)
 			}
+			if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
+				fmt.Println("read timeout", neterr)
+			}
 			break
 		}
 		//fmt.Println("Read", n, "bytes")
-		//version := tmp[0]
+		version := tmp[0]
+		if version != 3 {
+			// TODO fix bogus error
+			err = errors.New(fmt.Sprintf("Invalid BMP Version %d", version))
+			break
+		}
 		//fmt.Println("Version:", version)
 		len := binary.BigEndian.Uint32(tmp[1:5])
 		//fmt.Println("Length:", len)
@@ -87,10 +113,19 @@ func (bmpConn *BmpConnection) readBmpMsgs(numMsgs int) (int, error) {
 		// Read len bytes into buffer
 		msgData := make([]byte, len)
 		copy(msgData[0:], tmp[:])
+		if timeout > 0 {
+			curTime := time.Now()
+			deadline := curTime.Add(time.Duration(timeout) * time.Second)
+			bmpConn.conn.SetReadDeadline(deadline)
+		}
 		_, err = io.ReadFull(bmpConn.conn, msgData[6:])
+		bmpConn.conn.SetReadDeadline(time.Time{})
 		if err != nil {
 			if err != io.EOF {
 				fmt.Println("read error:", err)
+			}
+			if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
+				fmt.Println("read timeout", neterr)
 			}
 			break
 		}
@@ -115,10 +150,19 @@ func (bmpConn *BmpConnection) serviceBmpConnection(c chan int) {
 		switch cmd {
 		case ReadMsg:
 			numMsgs := <-c
-			msgCount, err := bmpConn.readBmpMsgs(numMsgs)
+			timeout := <-c
+			msgCount, err := bmpConn.readBmpMsgs(numMsgs, timeout)
 			if err == nil {
 				c <- 0
 				c <- msgCount
+			} else {
+				if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
+					c <- Timeout
+					c <- msgCount
+				} else {
+					c <- Error
+					c <- msgCount
+				}
 			}
 		case Disconnect:
 			bmpConn.conn.Close()
@@ -126,6 +170,8 @@ func (bmpConn *BmpConnection) serviceBmpConnection(c chan int) {
 		case Terminate:
 			c <- 0
 			break
+		default:
+			fmt.Println("serviceBmpConnection: Invalid cmd")
 		}
 	}
 }

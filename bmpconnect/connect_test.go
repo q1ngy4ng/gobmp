@@ -37,6 +37,7 @@ func TestBmpConnect(t *testing.T) {
 	go bmpConn.serviceBmpConnection(c)
 	c <- ReadMsg
 	c <- 5
+	c <- 3
 	status := <-c
 	msgCount := <-c
 	if status == 0 {
@@ -53,6 +54,7 @@ func TestBmpConnect(t *testing.T) {
 	for {
 		c <- ReadMsg
 		c <- 1
+		c <- 3
 		status = <-c
 		msgCount = <-c
 		index := uint(len(bmpConn.msgs) - 1)
