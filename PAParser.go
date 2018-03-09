@@ -1,45 +1,47 @@
 package main
 
-import "fmt"
-
-type AsPathAttr struct {
-   len U32
-   data U8[int]
-}
+import "encoding/binary"
 
 type PathAttribute struct {
-   nextHop U32  // let’s just do v4 for now (v6 would be in a different TLV anyway)
-   origin U8
-   //pathFlags U8
-   //originatorId U32 // this is not interesting and I will just remove it
-   //aspType U32  ← just for the record, we don’t seem to need this in bgpSmash!
-   med U32
-   localPref U32
-   asPathLen U32
-   asPathData *U8
+   nextHop uint32  // let’s just do v4 for now (v6 would be in a different TLV anyway)
+   origin uint32
+   //pathFlags uint8
+   //originatorId uint32 // this is not interesting and I will just remove it
+   //aspType uint32  ← just for the record, we don’t seem to need this in bgpSmash!
+   med uint32
+   localPref uint32
+   asPathLen uint16
+   asPathData []uint8
    //commList CommList
    //extCommListId : ExtCommListId;
 }
      
 // the following parse the input byte array and returns the path attribute 
 // struct along with the consumed length
-func parsePathAttribute(inArray []byte) {
-	var totalLen int = 0
-        var attrLen int
-        var typeCode int
-        var flag int
- 
-	var index int = 0
+func parsePathAttribute(inArray []uint8) (uint16, PathAttribute){
+	var totalLen uint16 = 0
+        var attrLen uint16
+        var typeCode uint8
+        var flag uint8
+	var pa PathAttribute 	
 
-        totalLen = (inArray[index++] << 8) | inArray[index]
+	var index uint16
+        index = 0
+
+        totalLen = binary.BigEndian.Uint16(inArray[index:index+2])
+	index += 2 
 
         for i := index; i < totalLen; i++ {
-		flag = inArray[index++]
-                attrLen = inArray[index++]
-                if (flag & 0x10) {  // extended length
-                     attrLen = (attrLen << 8) | inArray[index++]
+		flag = inArray[index]
+		index += 1
+                attrLen = uint16(inArray[index])
+		index += 1
+                if ((flag & 0x10) != 0) {  // extended length
+                     attrLen = (attrLen << 8) | uint16(inArray[index])
+		     index += 1
                 }
-                typeCode = inArray[index++]
+                typeCode = inArray[index]
+		index += 1
 		
 		if (attrLen == 0) {
 			panic("incorrect total length")
@@ -53,27 +55,31 @@ func parsePathAttribute(inArray []byte) {
 			if (attrLen != 4) {
 				panic("incorrect origin length") 
 			}
-			pa.origin = (inArray[index++] << 24) | (inArray[index++] << 16) | (inArray[index++] << 8) |(inArray[index++]) 
+			pa.origin = binary.BigEndian.Uint32(inArray[index:index+4])
+			index += 4 
                 case 2:  // as path
  			pa.asPathLen = attrLen
-                        pa.asPathData = make([]byte, attrLen)
+                        pa.asPathData = make([]uint8, attrLen)
 			copy(pa.asPathData, inArray[index:index+attrLen])
 			index += attrLen                       
                 case 3:  // next hop
                		if (attrLen != 4) {
 				panic("incorrect nexthop length")
 			}
-			pa.nexthop = (inArray[index++] << 24) | (inArray[index++] << 16) | (inArray[index++] << 8) |(inArray[index++])
+			pa.nextHop = binary.BigEndian.Uint32(inArray[index:index+4])
+                        index += 4
                 case 4: // med
 			if (attrLen != 4) {
                                 panic("incorrect med length")
                         }
-                        pa.med = (inArray[index++] << 24) | (inArray[index++] << 16) | (inArray[index++] << 8) |(inArray[index++])
+                        pa.med = binary.BigEndian.Uint32(inArray[index:index+4])
+                        index += 4
                 case 5: // local pref
                         if (attrLen != 4) {
                                 panic("incorrect local pref length")
                         }
-                        pa.localPref = (inArray[index++] << 24) | (inArray[index++] << 16) | (inArray[index++] << 8) |(inArray[index++])
+                        pa.localPref = binary.BigEndian.Uint32(inArray[index:index+4])
+                        index += 4
 	
                 case 6: // atomic aggregate - we don't care for now
                 case 7: // aggregator - we don't care
@@ -83,5 +89,5 @@ func parsePathAttribute(inArray []byte) {
 }
 
 // the following dumps the as path into a human readable string
-func dumpAsPath(aspath AsPathAttr) {
-} 
+//func dumpAsPath(aspath AsPathAttr) {
+//} 
