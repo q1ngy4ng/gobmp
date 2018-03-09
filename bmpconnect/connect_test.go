@@ -1,17 +1,36 @@
-package main
+package bmpconnect
 
-// to run the test run "nc -l 10000 < bmp_messages.bin" in bash and then run this program
-// go run test_connect.go connect.go
+// go test
 
-import "os"
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"testing"
+)
 
-func main() {
+func TestBmpConnect(t *testing.T) {
+	t.Log("Start BMP Speaker")
+	fmt.Println("Start BMP Speaker")
+	command := exec.Command("/usr/bin/nc", "-l", "10000")
+	f, err := os.Open("bmp_messages.bin")
+	if err != nil {
+		fmt.Printf("error opening file: %v", err)
+		t.Fail()
+	}
+	defer f.Close()
+	// On this line you're going to redirect the output to a file
+	command.Stdin = f
+	if err := command.Start(); err != nil {
+		fmt.Fprintln(os.Stderr, "Command failed.", err)
+		t.Fail()
+	}
+
 	fmt.Println("Connect to 127.0.0.1 port 10000")
 	bmpConn, err := connectBmp("127.0.0.1", 10000)
 	if err != nil {
 		fmt.Printf("Error connecting to Bmp")
-		os.Exit(-1)
+		t.Fail()
 	}
 	fmt.Println("Connected to Bmp speaker")
 	c := make(chan int)
@@ -26,6 +45,9 @@ func main() {
 	// Check first message is type 4 (Initiation)
 	if bmpConn.msgs[0].msgType == 4 {
 		fmt.Println("Found Initiation Message")
+	} else {
+		t.Log("Failed to find Initiation Message")
+		t.Fail()
 	}
 	// Now just read until Termination message
 	for {
