@@ -3,8 +3,11 @@
 
 package bmpstorage
 
-import "fmt"
-import "time"
+import (
+	"fmt"
+	"sync"
+	"time"
+)
 
 type PathAttr struct {
 	attr string
@@ -28,6 +31,7 @@ type SpeakerStatus struct {
 	State             bool
 	Timestamp         time.Time
 	Localtimestamp    time.Time
+	UpdateCnt         uint32
 }
 type PeerStatus struct {
 	State          bool
@@ -41,18 +45,45 @@ type PeerDB struct {
 }
 type BmpDB struct {
 	// key : bgp_speaker_id
-	Speaker  map[int]*SpeakerStatus
-	PeerDB   map[int]*PeerDB
-	PrefixDB map[int]*PeerPrefixDB
+	Speaker      map[int]*SpeakerStatus
+	PeerDB       map[int]*PeerDB
+	PeerPrefixDB map[int]*PeerPrefixDB
+	mutex        sync.Mutex
 }
 
 func (db *BmpDB) UpdateRoute(speakerId int, peerAddress string,
 	prefix string, pathAttr *PathAttr, timestamp time.Time) {
-	fmt.Printf("RouteUpdate %d %s %s %p %s %s\n", speakerId, peerAddress,
+	fmt.Printf("UpdateRoute %d %s %s %p %s %s\n", speakerId, peerAddress,
 		prefix, pathAttr,
 		timestamp.Format(time.RFC850),
 		time.Now().Format(time.RFC850))
-
+	db.mutex.Lock()
+	if db.PeerPrefixDB == nil {
+		db.PeerPrefixDB = map[int]*PeerPrefixDB{}
+	}
+	if _, ok := db.PeerPrefixDB[speakerId]; !ok {
+		db.PeerPrefixDB[speakerId] = new(PeerPrefixDB)
+	}
+	peerPrefixDB := db.PeerPrefixDB[speakerId]
+	if peerPrefixDB.PrefixDB == nil {
+		peerPrefixDB.PrefixDB = map[string]*PrefixDB{}
+	}
+	if _, ok := peerPrefixDB.PrefixDB[peerAddress]; !ok {
+		peerPrefixDB.PrefixDB[peerAddress] = new(PrefixDB)
+	}
+	prefixDB := peerPrefixDB.PrefixDB[peerAddress]
+	if prefixDB.PrefixAttr == nil {
+		prefixDB.PrefixAttr = map[string]*PrefixAttr{}
+	}
+	if _, ok := prefixDB.PrefixAttr[prefix]; !ok {
+		prefixDB.PrefixAttr[prefix] = new(PrefixAttr)
+		prefixDB.PrefixAttr[prefix].UpdateCnt = 0
+	}
+	prefixDB.PrefixAttr[prefix].UpdateCnt += 1
+	prefixDB.PrefixAttr[prefix].Timestamp = timestamp
+	prefixDB.PrefixAttr[prefix].Localtimestamp = time.Now()
+	prefixDB.PrefixAttr[prefix].PathAttr = pathAttr
+	db.mutex.Unlock()
 }
 
 func (db *BmpDB) UpdateSpeaker(speakerId int, speakerAddress string,
@@ -61,7 +92,20 @@ func (db *BmpDB) UpdateSpeaker(speakerId int, speakerAddress string,
 		speakerId, speakerAddress, initialize,
 		timestamp.Format(time.RFC850),
 		time.Now().Format(time.RFC850))
-
+	db.mutex.Lock()
+	if db.Speaker == nil {
+		db.Speaker = map[int]*SpeakerStatus{}
+	}
+	if _, ok := db.Speaker[speakerId]; !ok {
+		db.Speaker[speakerId] = new(SpeakerStatus)
+		db.Speaker[speakerId].UpdateCnt = 0
+	}
+	db.Speaker[speakerId].UpdateCnt += 1
+	db.Speaker[speakerId].BgpSpeakerAddress = speakerAddress
+	db.Speaker[speakerId].State = initialize
+	db.Speaker[speakerId].Timestamp = timestamp
+	db.Speaker[speakerId].Localtimestamp = time.Now()
+	db.mutex.Unlock()
 }
 
 func (db *BmpDB) UpdatePeer(speakerId int, peerAddress string,
@@ -70,4 +114,26 @@ func (db *BmpDB) UpdatePeer(speakerId int, peerAddress string,
 		speakerId, peerAddress, up,
 		timestamp.Format(time.RFC850),
 		time.Now().Format(time.RFC850))
+	db.mutex.Lock()
+	if db.PeerDB == nil {
+		db.PeerDB = map[int]*PeerDB{}
+	}
+	if _, ok := db.PeerDB[speakerId]; !ok {
+		db.PeerDB[speakerId] = new(PeerDB)
+	}
+	peerDB := db.PeerDB[speakerId]
+	if peerDB.Peer == nil {
+		peerDB.Peer = map[string]*PeerStatus{}
+	}
+	if _, ok := peerDB.Peer[peerAddress]; !ok {
+
+		peerDB.Peer[peerAddress] = new(PeerStatus)
+		peerDB.Peer[peerAddress].UpdateCnt = 0
+	}
+	peerDB.Peer[peerAddress] = new(PeerStatus)
+	peerDB.Peer[peerAddress].State = up
+	peerDB.Peer[peerAddress].Timestamp = timestamp
+	peerDB.Peer[peerAddress].Localtimestamp = time.Now()
+	peerDB.Peer[peerAddress].UpdateCnt += 1
+	db.mutex.Unlock()
 }
