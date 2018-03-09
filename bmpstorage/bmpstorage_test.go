@@ -11,7 +11,7 @@ import (
 
 func TestBmpstorage(t *testing.T) {
 	fmt.Printf("TestBmpstorage Ok \n")
-	db := new(BmpDB)
+	db := GetBmpDB()
 	now := time.Now()
 	db.UpdatePeer(123, "2.2.2.2", true, now)
 	if db.PeerDB[123].Peer["2.2.2.2"].State != true {
@@ -61,5 +61,30 @@ func TestBmpstorage(t *testing.T) {
 		t.Fail()
 	}
 
+	db = GetBmpDB()
+	prefixAttr = db.PeerPrefixDB[123].PrefixDB["2.2.2.2"].PrefixAttr["3.3.3.0/24"]
+	if prefixAttr.PathAttr != &pathAttr {
+		t.Log("prefixAttr.PathAttr != &pathAttr")
+		t.Fail()
+	}
+	var modifiedPathAttr PathAttr
+	now = time.Now()
+	db.UpdateRoute(123, "2.2.2.2", "3.3.3.0/24", &modifiedPathAttr, now)
+	if prefixAttr.PathAttr != &modifiedPathAttr {
+		t.Log("prefixAttr.PathAttr != &modifiedPathAttr")
+		t.Fail()
+	}
+	if prefixAttr.Timestamp != now {
+		t.Log("prefixAttr.Timestamp != now")
+		t.Fail()
+	}
+	if prefixAttr.UpdateCnt != 2 {
+		t.Log("prefixAttr.UpdateCnt != 1")
+		t.Fail()
+	}
+	if prefixAttr.Localtimestamp.Before(now) {
+		t.Log("prefixAttr.Localtimestamp.Before( now )")
+		t.Fail()
+	}
 	fmt.Printf("TestBmpstorage Ok0 \n")
 }
