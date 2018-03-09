@@ -1,9 +1,13 @@
 package main
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"fmt"
+	"net"
+)
 
 type PathAttribute struct {
-   nextHop uint32  // let’s just do v4 for now (v6 would be in a different TLV anyway)
+   nextHop net.IP  // let’s just do v4 for now (v6 would be in a different TLV anyway)
    origin uint32
    //pathFlags uint8
    //originatorId uint32 // this is not interesting and I will just remove it
@@ -66,7 +70,7 @@ func parsePathAttribute(inArray []uint8) (uint16, PathAttribute){
                		if (attrLen != 4) {
 				panic("incorrect nexthop length")
 			}
-			pa.nextHop = binary.BigEndian.Uint32(inArray[index:index+4])
+			pa.nextHop = net.IPv4(inArray[index], inArray[index+1], inArray[index+2], inArray[index+3])
                         index += 4
                 case 4: // med
 			if (attrLen != 4) {
@@ -90,4 +94,49 @@ func parsePathAttribute(inArray []uint8) (uint16, PathAttribute){
 
 // the following dumps the as path into a human readable string
 //func dumpAsPath(aspath AsPathAttr) {
-//} 
+//}
+
+func dumpPathAttribute(pa PathAttribute, indent string) {
+	fmt.Printf("%s", indent)
+
+	fmt.Printf("Path Attribute:\n")
+
+        fmt.Printf("\t%s", indent)
+        fmt.Printf("Origin: ")
+        switch pa.origin {
+	case 0: // igp
+		fmt.Printf("i")
+	case 1: // egp
+		fmt.Printf("e")
+	case 2: // unknown
+		fmt.Printf("?")
+	}
+	fmt.Printf("\n")
+
+	fmt.Printf("\t%s", indent)
+	fmt.Printf("Next Hop: ")
+	fmt.Println(pa.nextHop)
+	fmt.Printf("\n")
+
+	if (pa.med > 0) {
+		fmt.Printf("\t%s", indent)
+		fmt.Printf("Multi Exit Discriminator: ")
+		fmt.Printf("%d", pa.med)
+		fmt.Printf("\n")
+	}
+
+	if (pa.localPref > 0) {  // this is probably wrong as local pref could be 0
+		fmt.Printf("\t%s", indent)
+		fmt.Printf("Local Preference: ")
+		fmt.Printf("%d", pa.localPref)
+		fmt.Printf("\n")
+	}
+
+	fmt.Printf("\t%s", indent)
+	fmt.Printf("As Path: ")
+	// this is the fun part
+	fmt.Printf("\n")	
+	
+	
+
+} 
