@@ -3,12 +3,12 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"os"
-	"io"
-	"strings"
-	"strconv"
-	"net"
 	"gobmp/bmpconnect"
+	"io"
+	"net"
+	"os"
+	"strconv"
+	"strings"
 )
 
 /*
@@ -24,9 +24,14 @@ gobmp> connections
 2.2.2.2:3000
 */
 
+type Connection struct {
+	bmpConn *bmpconnect.BmpConnection
+	c       chan int
+}
+
 func main() {
-	connections := make(map[string]chan int)
-	err := evalCommand("connect " + os.Args[1], connections)
+	connections := make(map[string]*Connection)
+	err := evalCommand("connect "+os.Args[1], connections)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -47,7 +52,7 @@ func main() {
 	}
 }
 
-func evalCommand(line string, connections map[string]chan int) error {
+func evalCommand(line string, connections map[string]*Connection) error {
 	cmdParts := strings.Fields(line)
 	if len(cmdParts) == 0 {
 		return nil
@@ -61,12 +66,14 @@ func evalCommand(line string, connections map[string]chan int) error {
 		return evalCmdReadMessages(cmdParts, connections)
 	case "show-connections":
 		return evalCmdShowConnections(cmdParts, connections)
+	case "dump-messages":
+		return evalCmdDumpMessages(cmdParts, connections)
 	default:
 		return fmt.Errorf("invalid command")
 	}
 }
 
-func evalCmdConnect(cmdParts []string, connections map[string]chan int) error {
+func evalCmdConnect(cmdParts []string, connections map[string]*Connection) error {
 	if !isValidIpAndPort(cmdParts[1]) {
 		return fmt.Errorf("malformed ip addresss and port")
 	}
@@ -76,9 +83,11 @@ func evalCmdConnect(cmdParts []string, connections map[string]chan int) error {
 	if err != nil {
 		return fmt.Errorf("connection refused")
 	}
-	c := make(chan int)
-	go bmpConnection.ServiceBmpConnection(c)
-	connections[cmdParts[1]] = c
+	connection := new(Connection)
+	connection.bmpConn = bmpConnection
+	connection.c = make(chan int)
+	go bmpConnection.ServiceBmpConnection(connection.c)
+	connections[cmdParts[1]] = connection
 	return nil
 }
 
@@ -98,26 +107,38 @@ func isValidIpAndPort(ipAndPort string) bool {
 	return true
 }
 
-func evalCmdDisconnect(cmdParts []string, connections map[string]chan int) error {
+func evalCmdDisconnect(cmdParts []string, connections map[string]*Connection) error {
 	k := cmdParts[1]
-	c, ok := connections[k]
+	conn, ok := connections[k]
 	if !ok {
 		return fmt.Errorf("no connection to %s", cmdParts[1])
 	}
+	c := conn.c
 	c <- bmpconnect.Terminate
 	delete(connections, k)
 	return nil
 }
 
-func evalCmdReadMessages(cmdParts []string, connections map[string]chan int) error {
+func evalCmdShowConnections(cmdParts []string, connections map[string]*Connection) error {
+	if len(cmdParts) != 1 {
+		return fmt.Errorf("invalid command")
+	}
+	for k, _ := range connections {
+		fmt.Println(k)
+	}
+	return nil
+}
+
+func evalCmdReadMessages(cmdParts []string, connections map[string]*Connection) error {
 	if len(cmdParts) != 4 {
 		return fmt.Errorf("invalid command")
 	}
 	k := cmdParts[1]
-	c, ok := connections[k]
+	conn, ok := connections[k]
 	if !ok {
 		return fmt.Errorf("no connection to %s", cmdParts[1])
 	}
+	c := conn.c
 	c <- bmpconnect.ReadMsg
 	numMsgs, _ := strconv.ParseInt(cmdParts[2], 10, 32)
 	timeout, _ := strconv.ParseInt(cmdParts[3], 10, 32)
@@ -126,12 +147,21 @@ func evalCmdReadMessages(cmdParts []string, connections map[string]chan int) err
 	return nil
 }
 
-func evalCmdShowConnections(cmdParts []string, connections map[string]chan int) error {
-	if len(cmdParts) != 1 {
+// dump-messages <connection> <index> <count>
+func evalCmdDumpMessages(cmdParts []string, connections map[string]*Connection) error {
+	if len(cmdParts) != 4 {
 		return fmt.Errorf("invalid command")
 	}
-	for k, _ := range connections {
-		fmt.Println(k)
+	k := cmdParts[1]
+	bmpConn := connections[k].bmpConn
+	//fmt.Println("got bmpConn for ", k, ":", bmpConn)
+	count, _ := strconv.Atoi(cmdParts[3])
+	//fmt.Println("count=", count)
+	for index, _ := strconv.Atoi(cmdParts[2]); count > 0; count-- {
+		//fmt.Println("get msg index", index)
+		msg := bmpConn.Message(uint(index))
+		fmt.Println(msg.MessageData())
+		index++
 	}
 	return nil
 }
