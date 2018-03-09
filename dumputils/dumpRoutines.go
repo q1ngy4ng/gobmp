@@ -1,10 +1,15 @@
 package dumputils
 
-import "fmt"
+import (
+	"fmt"
+	"encoding/json"
+	"log"
+	"gobmp/bmpstorage"
+)
 
 // Go routine to dump summary
 func DumpSummary(done chan bool, m map[string]int) {
-	fmt.Println("Show Summary")
+	fmt.Println("Show Summary:")
 	fmt.Println("Prefix		", "NumRcvd")
 	fmt.Println("------		", "---------------")
 	for key, value := range m {
@@ -12,3 +17,69 @@ func DumpSummary(done chan bool, m map[string]int) {
 	}
 	done <- true
 }
+
+func DumpSpeakerStatus(done chan bool, isJson bool,
+					   db map[int]*bmpstorage.SpeakerStatus) {
+	if isJson {
+		m, err := json.Marshal(db)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%s\n", m)
+	} else {
+		fmt.Println("Speaker Status:")
+		fmt.Println("SpeakerId	","Address	","State	",
+					"TimeStamp	","LocalTimeStamp	")
+		fmt.Println("---------	","-------	","-----	",
+					"---------	","--------------	")
+		for key, value := range db {
+			fmt.Println(key,"		",
+						value.BgpSpeakerAddress,"	",
+						value.State, "	",
+						value.Timestamp, "	",
+						value.Localtimestamp, "	")
+		}
+	}
+	done <- true
+}
+
+func DumpPeerStatus(done chan bool, isJson bool,
+					peerdb map[string]*bmpstorage.PeerStatus) {
+    if isJson {
+        m, err := json.Marshal(peerdb)
+        if err != nil {
+            log.Fatal(err)
+        }
+        fmt.Printf("%s\n", m)
+    } else {
+		fmt.Println("Peer Status:")
+		fmt.Println("PeerAddr	","State	","UpdateCnt	",
+					"TimeStamp	","LocalTimeStamp	")
+		fmt.Println("---------	","-----	","--------		",
+					"---------	","--------------	")
+		for key, value := range peerdb {
+			fmt.Println(key,"		",
+						value.State,"	",
+						value.UpdateCnt, "	",
+						value.Timestamp, "	",
+						value.Localtimestamp, "	")
+		}
+	}
+	done <- true
+}
+
+func DumpPrefixDB(done chan bool, isJson bool,
+				  prefixAttr map[string]*bmpstorage.PrefixAttr) {
+
+    if isJson {
+        m, err := json.Marshal(prefixAttr)
+        if err != nil {
+            log.Fatal(err)
+        }
+        fmt.Printf("%s\n", m)
+    } else {
+		fmt.Println("Prefixes:")
+	}
+	done <- true
+}
+
