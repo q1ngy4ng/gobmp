@@ -20,6 +20,10 @@ type BmpMsg struct {
 	msgData []byte
 }
 
+func (bmpMsg *BmpMsg) MessageData() []byte {
+	return bmpMsg.msgData
+}
+
 type BmpConnection struct {
 	// Connection created in connectBmp (listener TBD)
 	conn net.Conn
@@ -27,6 +31,10 @@ type BmpConnection struct {
 	msgIdGen uint
 	// Messages indexed by msg Id
 	msgs map[uint]*BmpMsg
+}
+
+func (bmpConn *BmpConnection) Message(index uint) *BmpMsg {
+	return bmpConn.msgs[index]
 }
 
 //
