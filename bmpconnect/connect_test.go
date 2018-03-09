@@ -27,14 +27,14 @@ func TestBmpConnect(t *testing.T) {
 	}
 
 	fmt.Println("Connect to 127.0.0.1 port 10000")
-	bmpConn, err := connectBmp("127.0.0.1", 10000)
+	bmpConn, err := ConnectBmp("127.0.0.1", 10000)
 	if err != nil {
 		fmt.Printf("Error connecting to Bmp")
 		t.Fail()
 	}
 	fmt.Println("Connected to Bmp speaker")
 	c := make(chan int)
-	go bmpConn.serviceBmpConnection(c)
+	go bmpConn.ServiceBmpConnection(c)
 	c <- ReadMsg
 	c <- 5
 	c <- 3
