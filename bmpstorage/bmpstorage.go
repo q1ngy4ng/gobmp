@@ -5,27 +5,27 @@ package bmpstorage
 
 import (
 	"fmt"
+	"net"
 	"sync"
 	"time"
-	"net"
 )
 
 type PathAttribute struct {
-   NextHop net.IP  // let’s just do v4 for now (v6 would be in a different TLV)
-   Origin uint32
-   //PathFlags uint8
-   //OriginatorId uint32 // this is not interesting and I will just remove it
-   //AspType uint32  ← just for the record, we don’t seem to need this in bgpSmaash!
-   Med uint32
-   LocalPref uint32
-   AsPathLen uint16
-   AsPathData []uint8
-   //CommList CommList
-   //ExtCommListId : ExtCommListId;
+	NextHop net.IP // let’s just do v4 for now (v6 would be in a different TLV)
+	Origin  uint32
+	//PathFlags uint8
+	//OriginatorId uint32 // this is not interesting and I will just remove it
+	//AspType uint32  ← just for the record, we don’t seem to need this in bgpSmaash!
+	Med        uint32
+	LocalPref  uint32
+	AsPathLen  uint16
+	AsPathData []uint8
+	//CommList CommList
+	//ExtCommListId : ExtCommListId;
 }
 
 type PrefixAttr struct {
-	PathAttribute       *PathAttribute
+	PathAttribute  *PathAttribute
 	Timestamp      time.Time
 	Localtimestamp time.Time
 	UpdateCnt      uint32
