@@ -17,6 +17,8 @@ gobmp> connect 2.2.2.2:3000
 gobmp> connections
 1.1.1.1:3000
 2.2.2.2:3000
+gobmp> read-messages 1.1.1.1:3000 5 3
+gobmp> read-messages 2.2.2.3:3000 10 5
 gobmp> disconnect 1.1.1.1:3000
 gobmp> connections
 2.2.2.2:3000
@@ -53,6 +55,8 @@ func evalCommand(line string, connections map[string]chan int) error {
 		return evalCmdDisconnect(cmdParts, connections)
 	case "connections":
 		return evalCmdConnections(cmdParts, connections)
+	case "read-messages":
+		return evalCmdReadMessages(cmdParts, connections)
 	default:
 		return fmt.Errorf("invalid command")
 	}
@@ -105,5 +109,19 @@ func evalCmdConnections(cmdParts []string, connections map[string]chan int) erro
 	for k, _ := range connections {
 		fmt.Println(k)
 	}
+	return nil
+}
+
+func evalCmdReadMessages(cmdParts []string, connections map[string]chan int) error {
+	if len(cmdParts) != 4 {
+		return fmt.Errorf("invalid command")
+	}
+	k := cmdParts[1]
+	c := connections[k]
+	c <- bmpconnect.ReadMsg
+	numMsgs, _ := strconv.ParseInt(cmdParts[2], 10, 32)
+	timeout, _ := strconv.ParseInt(cmdParts[3], 10, 32)
+	c <- int(numMsgs)
+	c <- int(timeout)
 	return nil
 }
