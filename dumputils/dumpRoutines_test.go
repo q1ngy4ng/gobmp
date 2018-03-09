@@ -62,3 +62,27 @@ func TestDumpPeerStatus(t *testing.T) {
 	go DumpPeerStatus(done, false, db)
     <- done
 }
+
+/* For reference
+type PathAttr struct {
+    attr string
+}
+type PrefixAttr struct {
+    PathAttr       *PathAttr
+    Timestamp      time.Time
+    Localtimestamp time.Time
+    UpdateCnt      uint32
+}
+type PrefixDB struct {
+    // key: prefix
+    PrefixAttr map[string]*PrefixAttr
+}
+type PeerPrefixDB struct {
+    // key: peer_address
+    PrefixDB map[string]*PrefixDB
+}
+*/
+
+func TestDumpPrefixDB(t *testing.T) {
+	fmt.Println("=========Test DumpPrefixDB==========")
+}
