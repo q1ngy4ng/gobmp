@@ -58,6 +58,7 @@ func (db *BmpDB) UpdateRoute(speakerId int, peerAddress string,
 		timestamp.Format(time.RFC850),
 		time.Now().Format(time.RFC850))
 	db.mutex.Lock()
+	defer db.mutex.Unlock()
 	if db.PeerPrefixDB == nil {
 		db.PeerPrefixDB = map[int]*PeerPrefixDB{}
 	}
@@ -83,7 +84,6 @@ func (db *BmpDB) UpdateRoute(speakerId int, peerAddress string,
 	prefixDB.PrefixAttr[prefix].Timestamp = timestamp
 	prefixDB.PrefixAttr[prefix].Localtimestamp = time.Now()
 	prefixDB.PrefixAttr[prefix].PathAttr = pathAttr
-	db.mutex.Unlock()
 }
 
 func (db *BmpDB) UpdateSpeaker(speakerId int, speakerAddress string,
@@ -93,6 +93,7 @@ func (db *BmpDB) UpdateSpeaker(speakerId int, speakerAddress string,
 		timestamp.Format(time.RFC850),
 		time.Now().Format(time.RFC850))
 	db.mutex.Lock()
+	defer db.mutex.Unlock()
 	if db.Speaker == nil {
 		db.Speaker = map[int]*SpeakerStatus{}
 	}
@@ -105,7 +106,6 @@ func (db *BmpDB) UpdateSpeaker(speakerId int, speakerAddress string,
 	db.Speaker[speakerId].State = initialize
 	db.Speaker[speakerId].Timestamp = timestamp
 	db.Speaker[speakerId].Localtimestamp = time.Now()
-	db.mutex.Unlock()
 }
 
 func (db *BmpDB) UpdatePeer(speakerId int, peerAddress string,
@@ -115,6 +115,7 @@ func (db *BmpDB) UpdatePeer(speakerId int, peerAddress string,
 		timestamp.Format(time.RFC850),
 		time.Now().Format(time.RFC850))
 	db.mutex.Lock()
+	defer db.mutex.Unlock()
 	if db.PeerDB == nil {
 		db.PeerDB = map[int]*PeerDB{}
 	}
@@ -135,5 +136,16 @@ func (db *BmpDB) UpdatePeer(speakerId int, peerAddress string,
 	peerDB.Peer[peerAddress].Timestamp = timestamp
 	peerDB.Peer[peerAddress].Localtimestamp = time.Now()
 	peerDB.Peer[peerAddress].UpdateCnt += 1
-	db.mutex.Unlock()
+}
+
+var (
+	bmpDB *BmpDB
+	once  sync.Once
+)
+
+func GetBmpDB() *BmpDB {
+	once.Do(func() {
+		bmpDB = new(BmpDB)
+	})
+	return bmpDB
 }
