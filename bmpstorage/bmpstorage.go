@@ -48,7 +48,7 @@ type BmpDB struct {
 	Speaker      map[int]*SpeakerStatus
 	PeerDB       map[int]*PeerDB
 	PeerPrefixDB map[int]*PeerPrefixDB
-	mutex        sync.Mutex
+	Mutex        sync.Mutex
 }
 
 func (db *BmpDB) UpdateRoute(speakerId int, peerAddress string,
@@ -57,8 +57,8 @@ func (db *BmpDB) UpdateRoute(speakerId int, peerAddress string,
 		prefix, pathAttr,
 		timestamp.Format(time.RFC850),
 		time.Now().Format(time.RFC850))
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
 	if db.PeerPrefixDB == nil {
 		db.PeerPrefixDB = map[int]*PeerPrefixDB{}
 	}
@@ -92,8 +92,8 @@ func (db *BmpDB) UpdateSpeaker(speakerId int, speakerAddress string,
 		speakerId, speakerAddress, initialize,
 		timestamp.Format(time.RFC850),
 		time.Now().Format(time.RFC850))
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
 	if db.Speaker == nil {
 		db.Speaker = map[int]*SpeakerStatus{}
 	}
@@ -106,6 +106,11 @@ func (db *BmpDB) UpdateSpeaker(speakerId int, speakerAddress string,
 	db.Speaker[speakerId].State = initialize
 	db.Speaker[speakerId].Timestamp = timestamp
 	db.Speaker[speakerId].Localtimestamp = time.Now()
+	if initialize {
+		// deferred clean up
+		delete(db.PeerDB, speakerId)
+		delete(db.PeerPrefixDB, speakerId)
+	}
 }
 
 func (db *BmpDB) UpdatePeer(speakerId int, peerAddress string,
@@ -114,8 +119,8 @@ func (db *BmpDB) UpdatePeer(speakerId int, peerAddress string,
 		speakerId, peerAddress, up,
 		timestamp.Format(time.RFC850),
 		time.Now().Format(time.RFC850))
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
+	db.Mutex.Lock()
+	defer db.Mutex.Unlock()
 	if db.PeerDB == nil {
 		db.PeerDB = map[int]*PeerDB{}
 	}
@@ -127,15 +132,24 @@ func (db *BmpDB) UpdatePeer(speakerId int, peerAddress string,
 		peerDB.Peer = map[string]*PeerStatus{}
 	}
 	if _, ok := peerDB.Peer[peerAddress]; !ok {
-
 		peerDB.Peer[peerAddress] = new(PeerStatus)
 		peerDB.Peer[peerAddress].UpdateCnt = 0
 	}
-	peerDB.Peer[peerAddress] = new(PeerStatus)
 	peerDB.Peer[peerAddress].State = up
 	peerDB.Peer[peerAddress].Timestamp = timestamp
 	peerDB.Peer[peerAddress].Localtimestamp = time.Now()
 	peerDB.Peer[peerAddress].UpdateCnt += 1
+	if up {
+		// deferred clean up
+		if db.PeerPrefixDB != nil {
+			if _, ok := db.PeerPrefixDB[speakerId]; ok {
+				peerPrefixDB := db.PeerPrefixDB[speakerId]
+				if peerPrefixDB.PrefixDB != nil {
+					delete(peerPrefixDB.PrefixDB, peerAddress)
+				}
+			}
+		}
+	}
 }
 
 var (
