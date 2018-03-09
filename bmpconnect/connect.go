@@ -30,7 +30,7 @@ type BmpConnection struct {
 //
 // TODO: make this a non-blocking connection?
 //
-func connectBmp(address string, port uint) (*BmpConnection, error) {
+func ConnectBmp(address string, port uint) (*BmpConnection, error) {
 	addr := fmt.Sprintf("%s:%d", address, port)
 
 	conn, err := net.Dial("tcp", addr)
@@ -109,7 +109,7 @@ func (bmpConn *BmpConnection) readBmpMsgs(numMsgs int) (int, error) {
 	return msgCount, err
 }
 
-func (bmpConn *BmpConnection) serviceBmpConnection(c chan int) {
+func (bmpConn *BmpConnection) ServiceBmpConnection(c chan int) {
 	for {
 		cmd := <-c
 		switch cmd {

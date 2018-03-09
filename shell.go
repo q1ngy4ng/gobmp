@@ -8,6 +8,7 @@ import (
 	"strings"
 	"strconv"
 	"net"
+	"gobmp/bmpconnect"
 )
 
 /*
@@ -58,20 +59,19 @@ func evalCommand(line string, connections map[string]chan int) error {
 }
 
 func evalCmdConnect(cmdParts []string, connections map[string]chan int) error {
-	c := make(chan int)
-	done := make(chan bool)
 	if !isValidIpAndPort(cmdParts[1]) {
 		return fmt.Errorf("malformed ip addresss and port")
 	}
-	// TODO: Integrate with BMPConnect
-	go func() {
-		done <- true
-	}()
-	if <- done {
-		connections[cmdParts[1]] = c
-		return nil
+	parts := strings.Split(cmdParts[1], ":")
+	port, _ := strconv.ParseUint(parts[1], 10, 32)
+	bmpConnection, err := bmpconnect.ConnectBmp(parts[0], uint(port))
+	if err != nil {
+		return fmt.Errorf("connection refused")
 	}
-	return fmt.Errorf("connection refused")
+	c := make(chan int)
+	go bmpConnection.ServiceBmpConnection(c)
+	connections[cmdParts[1]] = c
+	return nil
 }
 
 func isValidIpAndPort(ipAndPort string) bool {
@@ -83,7 +83,7 @@ func isValidIpAndPort(ipAndPort string) bool {
 	if netIP == nil {
 		return false
 	}
-	port, err := strconv.ParseUint(parts[1], 10, 64)
+	port, err := strconv.ParseUint(parts[1], 10, 32)
 	if err != nil || port < 0 || port > 65535 {
 		return false
 	}
@@ -93,11 +93,7 @@ func isValidIpAndPort(ipAndPort string) bool {
 func evalCmdDisconnect(cmdParts []string, connections map[string]chan int) error {
 	k := cmdParts[1]
 	c := connections[k]
-	// TODO: Integrate with BMPConnect
-	go func () {
-		<- c
-	}()
-	c <- 2
+	c <- bmpconnect.Terminate
 	delete(connections, k)
 	return nil
 }
