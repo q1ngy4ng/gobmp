@@ -42,11 +42,11 @@ func TestBmpstorage(t *testing.T) {
 		t.Fail()
 	}
 
-	var pathAttr PathAttr
+	var pathAttr PathAttribute
 	db.UpdateRoute(123, "2.2.2.2", "3.3.3.0/24", &pathAttr, now)
 	prefixAttr := db.PeerPrefixDB[123].PrefixDB["2.2.2.2"].PrefixAttr["3.3.3.0/24"]
-	if prefixAttr.PathAttr != &pathAttr {
-		t.Log("prefixAttr.PathAttr != &pathAttr")
+	if prefixAttr.PathAttribute != &pathAttr {
+		t.Log("prefixAttr.PathAttribute != &pathAttr")
 		t.Fail()
 	}
 	if prefixAttr.Timestamp != now {
@@ -63,13 +63,13 @@ func TestBmpstorage(t *testing.T) {
 	}
 	db.UpdateRoute(123, "2.2.2.2", "3.3.30.0/24", &pathAttr, now)
 	prefixAttr = db.PeerPrefixDB[123].PrefixDB["2.2.2.2"].PrefixAttr["3.3.3.0/24"]
-	if prefixAttr.PathAttr != &pathAttr {
-		t.Log("prefixAttr.PathAttr != &pathAttr")
+	if prefixAttr.PathAttribute != &pathAttr {
+		t.Log("prefixAttr.PathAttribute != &pathAttr")
 		t.Fail()
 	}
 	prefixAttr = db.PeerPrefixDB[123].PrefixDB["2.2.2.2"].PrefixAttr["3.3.30.0/24"]
-	if prefixAttr.PathAttr != &pathAttr {
-		t.Log("prefixAttr.PathAttr != &pathAttr")
+	if prefixAttr.PathAttribute != &pathAttr {
+		t.Log("prefixAttr.PathAttribute != &pathAttr")
 		t.Fail()
 	}
 	if prefixAttr.Timestamp != now {
@@ -87,17 +87,17 @@ func TestBmpstorage(t *testing.T) {
 
 	db = GetBmpDB()
 	prefixAttr = db.PeerPrefixDB[123].PrefixDB["2.2.2.2"].PrefixAttr["3.3.3.0/24"]
-	if prefixAttr.PathAttr != &pathAttr {
-		t.Log("prefixAttr.PathAttr != &pathAttr")
+	if prefixAttr.PathAttribute != &pathAttr {
+		t.Log("prefixAttr.PathAttribute != &pathAttr")
 		t.Fail()
 	}
 
-	var modifiedPathAttr PathAttr
+	var modifiedPathAttribute PathAttribute
 	now = time.Now()
-	db.UpdateRoute(123, "2.2.2.2", "3.3.3.0/24", &modifiedPathAttr, now)
+	db.UpdateRoute(123, "2.2.2.2", "3.3.3.0/24", &modifiedPathAttribute, now)
 	prefixAttr = db.PeerPrefixDB[123].PrefixDB["2.2.2.2"].PrefixAttr["3.3.3.0/24"]
-	if prefixAttr.PathAttr != &modifiedPathAttr {
-		t.Log("prefixAttr.PathAttr != &modifiedPathAttr")
+	if prefixAttr.PathAttribute != &modifiedPathAttribute {
+		t.Log("prefixAttr.PathAttribute != &modifiedPathAttribute")
 		t.Fail()
 	}
 	if prefixAttr.Timestamp != now {
@@ -133,8 +133,8 @@ func TestBmpstorage(t *testing.T) {
 	}
 
 	prefixAttr = db.PeerPrefixDB[123].PrefixDB["2.2.2.2"].PrefixAttr["3.3.3.0/24"]
-	if prefixAttr.PathAttr != &modifiedPathAttr {
-		t.Log("prefixAttr.PathAttr != &modifiedPathAttr")
+	if prefixAttr.PathAttribute != &modifiedPathAttribute {
+		t.Log("prefixAttr.PathAttribute != &modifiedPathAttribute")
 		t.Fail()
 	}
 
