@@ -160,7 +160,13 @@ func evalCmdDumpMessages(cmdParts []string, connections map[string]*Connection) 
 	for index, _ := strconv.Atoi(cmdParts[2]); count > 0; count-- {
 		//fmt.Println("get msg index", index)
 		msg := bmpConn.Message(uint(index))
-		fmt.Println(msg.MessageData())
+		//fmt.Println(msg.MessageData())
+		data := msg.MessageData()
+		fmt.Println("Message", index)
+		for _, value := range data {
+			fmt.Printf("%x ", value)
+		}
+		fmt.Println("")
 		index++
 	}
 	return nil
