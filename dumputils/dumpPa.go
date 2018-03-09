@@ -1,10 +1,9 @@
-package main
+package dumputils
 
 import (
 	"encoding/binary"
 	"fmt"
-	"net"
-	"gobmp/parser"
+	"gobmp/bmpstorage"
 )
 
 // the following dumps the as path into a human readable string
@@ -24,16 +23,16 @@ func dumpAsPath(len uint16, data []uint8) {
 		switch segType {
 		case 1: // as set
 			ob = "("
-			cb = ")"
+			cb = ") "
 		case 2: // as sequence
 			ob = ""
-			cb = ""
+			cb = " "
 		case 3: // confed set
 			ob = "["
-			cb = "]"
+			cb = "] "
 		case 4: // confed seq
 			ob = "{"
-			cb = "}"		
+			cb = "} "		
 		}
 		fmt.Println(ob)
 		for j := segLen; j > 0; j-- {
@@ -48,14 +47,14 @@ func dumpAsPath(len uint16, data []uint8) {
 	}
 }
 
-func dumpPathAttribute(pa PathAttribute, indent string) {
+func dumpPathAttribute(pa bmpstorage.PathAttribute, indent string) {
 	fmt.Printf("%s", indent)
 
 	fmt.Printf("Path Attribute:\n")
 
         fmt.Printf("\t%s", indent)
         fmt.Printf("Origin: ")
-        switch pa.origin {
+        switch pa.Origin {
 	case 0: // igp
 		fmt.Printf("i")
 	case 1: // egp
@@ -67,26 +66,26 @@ func dumpPathAttribute(pa PathAttribute, indent string) {
 
 	fmt.Printf("\t%s", indent)
 	fmt.Printf("Next Hop: ")
-	fmt.Println(pa.nextHop)
+	fmt.Println(pa.NextHop)
 	fmt.Printf("\n")
 
-	if (pa.med > 0) {
+	if (pa.Med > 0) {
 		fmt.Printf("\t%s", indent)
 		fmt.Printf("Multi Exit Discriminator: ")
-		fmt.Printf("%d", pa.med)
+		fmt.Printf("%d", pa.Med)
 		fmt.Printf("\n")
 	}
 
-	if (pa.localPref > 0) {  // this is probably wrong as local pref could be 0
+	if (pa.LocalPref > 0) {  // this is probably wrong as local pref could be 0
 		fmt.Printf("\t%s", indent)
 		fmt.Printf("Local Preference: ")
-		fmt.Printf("%d", pa.localPref)
+		fmt.Printf("%d", pa.LocalPref)
 		fmt.Printf("\n")
 	}
 
 	fmt.Printf("\t%s", indent)
 	fmt.Printf("As Path: ")
-	dumpAsPath(pa.asPathLen, pa.asPathData)
+	dumpAsPath(pa.AsPathLen, pa.AsPathData)
 	fmt.Printf("\n")	
 	
 
