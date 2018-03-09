@@ -26,6 +26,10 @@ gobmp> connections
 
 func main() {
 	connections := make(map[string]chan int)
+	err := evalCommand("connect " + os.Args[1], connections)
+	if err != nil {
+		fmt.Println(err)
+	}
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("gobmp> ")
@@ -53,10 +57,10 @@ func evalCommand(line string, connections map[string]chan int) error {
 		return evalCmdConnect(cmdParts, connections)
 	case "disconnect":
 		return evalCmdDisconnect(cmdParts, connections)
-	case "connections":
-		return evalCmdConnections(cmdParts, connections)
 	case "read-messages":
 		return evalCmdReadMessages(cmdParts, connections)
+	case "show-connections":
+		return evalCmdShowConnections(cmdParts, connections)
 	default:
 		return fmt.Errorf("invalid command")
 	}
@@ -96,19 +100,12 @@ func isValidIpAndPort(ipAndPort string) bool {
 
 func evalCmdDisconnect(cmdParts []string, connections map[string]chan int) error {
 	k := cmdParts[1]
-	c := connections[k]
+	c, ok := connections[k]
+	if !ok {
+		return fmt.Errorf("no connection to %s", cmdParts[1])
+	}
 	c <- bmpconnect.Terminate
 	delete(connections, k)
-	return nil
-}
-
-func evalCmdConnections(cmdParts []string, connections map[string]chan int) error {
-	if len(cmdParts) != 1 {
-		return fmt.Errorf("invalid command")
-	}
-	for k, _ := range connections {
-		fmt.Println(k)
-	}
 	return nil
 }
 
@@ -117,11 +114,24 @@ func evalCmdReadMessages(cmdParts []string, connections map[string]chan int) err
 		return fmt.Errorf("invalid command")
 	}
 	k := cmdParts[1]
-	c := connections[k]
+	c, ok := connections[k]
+	if !ok {
+		return fmt.Errorf("no connection to %s", cmdParts[1])
+	}
 	c <- bmpconnect.ReadMsg
 	numMsgs, _ := strconv.ParseInt(cmdParts[2], 10, 32)
 	timeout, _ := strconv.ParseInt(cmdParts[3], 10, 32)
 	c <- int(numMsgs)
 	c <- int(timeout)
+	return nil
+}
+
+func evalCmdShowConnections(cmdParts []string, connections map[string]chan int) error {
+	if len(cmdParts) != 1 {
+		return fmt.Errorf("invalid command")
+	}
+	for k, _ := range connections {
+		fmt.Println(k)
+	}
 	return nil
 }
