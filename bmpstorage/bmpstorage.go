@@ -7,13 +7,25 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"net"
 )
 
-type PathAttr struct {
-	attr string
+type PathAttribute struct {
+   NextHop net.IP  // let’s just do v4 for now (v6 would be in a different TLV)
+   Origin uint32
+   //PathFlags uint8
+   //OriginatorId uint32 // this is not interesting and I will just remove it
+   //AspType uint32  ← just for the record, we don’t seem to need this in bgpSmaash!
+   Med uint32
+   LocalPref uint32
+   AsPathLen uint16
+   AsPathData []uint8
+   //CommList CommList
+   //ExtCommListId : ExtCommListId;
 }
+
 type PrefixAttr struct {
-	PathAttr       *PathAttr
+	PathAttribute       *PathAttribute
 	Timestamp      time.Time
 	Localtimestamp time.Time
 	UpdateCnt      uint32
@@ -52,7 +64,7 @@ type BmpDB struct {
 }
 
 func (db *BmpDB) UpdateRoute(speakerId int, peerAddress string,
-	prefix string, pathAttr *PathAttr, timestamp time.Time) {
+	prefix string, pathAttr *PathAttribute, timestamp time.Time) {
 	fmt.Printf("UpdateRoute %d %s %s %p %s %s\n", speakerId, peerAddress,
 		prefix, pathAttr,
 		timestamp.Format(time.RFC850),
@@ -83,7 +95,7 @@ func (db *BmpDB) UpdateRoute(speakerId int, peerAddress string,
 	prefixDB.PrefixAttr[prefix].UpdateCnt += 1
 	prefixDB.PrefixAttr[prefix].Timestamp = timestamp
 	prefixDB.PrefixAttr[prefix].Localtimestamp = time.Now()
-	prefixDB.PrefixAttr[prefix].PathAttr = pathAttr
+	prefixDB.PrefixAttr[prefix].PathAttribute = pathAttr
 }
 
 func (db *BmpDB) UpdateSpeaker(speakerId int, speakerAddress string,

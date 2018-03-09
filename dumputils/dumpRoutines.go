@@ -68,11 +68,22 @@ func DumpPeerStatus(done chan bool, isJson bool,
 	done <- true
 }
 
+/* For reference
+type PrefixDB struct {
+    // key: prefix
+    PrefixAttr map[string]*PrefixAttr
+}
+type PeerPrefixDB struct {
+    // key: peer_address
+    PrefixDB map[string]*PrefixDB
+}
+*/
+
 func DumpPrefixDB(done chan bool, isJson bool,
-				  prefixAttr map[string]*bmpstorage.PrefixAttr) {
+				  peerdb map[string]*bmpstorage.PrefixDB) {
 
     if isJson {
-        m, err := json.Marshal(prefixAttr)
+        m, err := json.Marshal(peerdb)
         if err != nil {
             log.Fatal(err)
         }
