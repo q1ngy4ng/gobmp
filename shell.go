@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"gobmp/bmpconnect"
 	"io"
@@ -139,11 +140,23 @@ func evalCmdReadMessages(cmdParts []string, connections map[string]*Connection) 
 		return fmt.Errorf("no connection to %s", cmdParts[1])
 	}
 	c := conn.c
-	c <- bmpconnect.ReadMsg
 	numMsgs, _ := strconv.ParseInt(cmdParts[2], 10, 32)
 	timeout, _ := strconv.ParseInt(cmdParts[3], 10, 32)
+	c <- bmpconnect.ReadMsg
 	c <- int(numMsgs)
 	c <- int(timeout)
+	status := <-c
+	msgCount := <-c
+	if status != bmpconnect.Ok {
+		if status == bmpconnect.Timeout {
+			return errors.New("Timeout reading messages")
+		} else {
+			return errors.New("Error on connection")
+		}
+	}
+	if msgCount != int(numMsgs) {
+		return errors.New("Could not read all messages")
+	}
 	return nil
 }
 
@@ -153,20 +166,26 @@ func evalCmdDumpMessages(cmdParts []string, connections map[string]*Connection) 
 		return fmt.Errorf("invalid command")
 	}
 	k := cmdParts[1]
-	bmpConn := connections[k].bmpConn
+	conn, ok := connections[k]
+	if !ok {
+		return fmt.Errorf("no connection to %s", cmdParts[1])
+	}
+	bmpConn := conn.bmpConn
 	//fmt.Println("got bmpConn for ", k, ":", bmpConn)
 	count, _ := strconv.Atoi(cmdParts[3])
 	//fmt.Println("count=", count)
 	for index, _ := strconv.Atoi(cmdParts[2]); count > 0; count-- {
 		//fmt.Println("get msg index", index)
-		msg := bmpConn.Message(uint(index))
-		//fmt.Println(msg.MessageData())
-		data := msg.MessageData()
-		fmt.Println("Message", index)
-		for _, value := range data {
-			fmt.Printf("%x ", value)
+		msg, ok := bmpConn.Message(uint(index))
+		if ok {
+			//fmt.Println(msg.MessageData())
+			data := msg.MessageData()
+			fmt.Println("Message", index)
+			for _, value := range data {
+				fmt.Printf("%x ", value)
+			}
+			fmt.Println("")
 		}
-		fmt.Println("")
 		index++
 	}
 	return nil

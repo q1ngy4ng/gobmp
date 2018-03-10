@@ -36,8 +36,9 @@ type BmpConnection struct {
 	msgs map[uint]*BmpMsg
 }
 
-func (bmpConn *BmpConnection) Message(index uint) *BmpMsg {
-	return bmpConn.msgs[index]
+func (bmpConn *BmpConnection) Message(index uint) (*BmpMsg, bool) {
+	msg, ok := bmpConn.msgs[index]
+	return msg, ok
 }
 
 //
@@ -158,6 +159,7 @@ func (bmpConn *BmpConnection) readBmpMsgs(numMsgs int, timeout int) (int, error)
 func (bmpConn *BmpConnection) ServiceBmpConnection(c chan int) {
 	for {
 		cmd := <-c
+		//fmt.Println("ServiceBmpConnection cmd:", cmd)
 		switch cmd {
 		case ReadMsg:
 			numMsgs := <-c
@@ -185,4 +187,5 @@ func (bmpConn *BmpConnection) ServiceBmpConnection(c chan int) {
 			fmt.Println("serviceBmpConnection: Invalid cmd")
 		}
 	}
+	//fmt.Println("exit ServiceBmpConnection")
 }
